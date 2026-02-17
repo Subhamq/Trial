@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinCalc Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* --- CSS VARIABLES & RESET --- */
+        :root {
+            --primary: #6C63FF; /* Purple accent */
+            --bg-color: #F8F9FA;
+            --card-bg: #FFFFFF;
+            --text-main: #333333;
+            --text-sec: #666666;
+            --border: #E9ECEF;
+            --shadow: 0 4px 12px rgba(0,0,0,0.05);
+            --nav-height: 70px;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --card-bg: #1E1E1E;
+            --text-main: #E0E0E0;
+            --text-sec: #AAAAAA;
+            --border: #333333;
+            --shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; transition: background 0.3s, color 0.3s; }
+        body { background: var(--bg-color); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* --- HEADER --- */
+        header {
+            display: flex; align-items: center; padding: 15px 20px;
+            background: var(--card-bg); box-shadow: var(--shadow); z-index: 10;
+        }
+        .menu-btn { font-size: 1.5rem; cursor: pointer; color: var(--text-main); background: none; border: none; }
+        .app-title { margin-left: 20px; font-size: 1.2rem; font-weight: 600; }
+
+        /* --- SIDEBAR (DRAWER) --- */
+        .sidebar-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 99; display: none; opacity: 0; transition: opacity 0.3s;
+        }
+        .sidebar-overlay.active { display: block; opacity: 1; }
+
+        .sidebar {
+            position: fixed; top: 0; left: -280px; width: 280px; height: 100%;
+            background: var(--card-bg); z-index: 100; transition: left 0.3s ease-in-out;
+            padding: 20px; display: flex; flex-direction: column; box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+        }
+        .sidebar.active { left: 0; }
+
+        .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .close-btn { font-size: 1.5rem; cursor: pointer; color: var(--text-sec); }
+        
+        .menu-item {
+            display: flex; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border);
+            cursor: pointer; color: var(--text-main); font-size: 1rem;
+        }
+        .menu-item i { width: 35px; color: var(--primary); }
+        
+        .quote-container { margin-top: auto; text-align: center; padding: 20px; background: rgba(108, 99, 255, 0.1); border-radius: 12px; }
+        .heart-icon { color: #FF4757; font-size: 1.5rem; margin-bottom: 10px; animation: heartbeat 1.5s infinite; }
+        @keyframes heartbeat { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+        /* --- MAIN CONTENT AREA --- */
+        main { flex: 1; padding: 20px; overflow-y: auto; padding-bottom: 90px; }
+        
+        .tab-section { display: none; animation: fadeIn 0.4s; }
+        .tab-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card { background: var(--card-bg); padding: 20px; border-radius: 16px; box-shadow: var(--shadow); margin-bottom: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.85rem; color: var(--text-sec); margin-bottom: 5px; }
+        input {
+            width: 100%; padding: 12px; background: var(--bg-color); border: 1px solid var(--border);
+            border-radius: 8px; color: var(--text-main); font-size: 1rem; outline: none;
+        }
+        input:focus { border-color: var(--primary); }
+        
+        .calc-btn-main {
+            width: 100%; padding: 14px; background: var(--primary); color: white; border: none;
+            border-radius: 8px; font-weight: 600; font-size: 1rem; cursor: pointer;
+        }
+        
+        .result-display {
+            margin-top: 20px; padding: 15px; background: rgba(108, 99, 255, 0.1); border-radius: 8px;
+            text-align: center; display: none;
+        }
+        .result-value { font-size: 1.8rem; font-weight: 700; color: var(--primary); }
+
+        /* Scientific Calculator Specific */
+        .sci-display {
+            width: 100%; height: 80px; background: var(--bg-color); border-radius: 8px;
+            margin-bottom: 15px; text-align: right; padding: 15px; font-size: 2rem;
+            color: var(--text-main); display: flex; align-items: center; justify-content: flex-end;
+            overflow-x: auto;
+        }
+        .sci-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .sci-btn {
+            padding: 15px; border-radius: 12px; border: none; font-size: 1.2rem; cursor: pointer;
+            background: var(--card-bg); color: var(--text-main); box-shadow: var(--shadow);
+        }
+        .sci-btn.op { color: var(--primary); font-weight: bold; }
+        .sci-btn.eq { background: var(--primary); color: white; grid-column: span 2; }
+
+        /* --- BOTTOM NAVIGATION --- */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-height);
+            background: var(--card-bg); box-shadow: 0 -2px 10px rgba(0,0,0,0.05); display: flex;
+            justify-content: space-around; align-items: center; z-index: 50;
+        }
+        .nav-tab {
+            display: flex; flex-direction: column; align-items: center; color: var(--text-sec);
+            font-size: 0.75rem; cursor: pointer; width: 100%;
+        }
+        .nav-tab i { font-size: 1.4rem; margin-bottom: 4px; }
+        .nav-tab.active { color: var(--primary); }
+        
+    </style>
+</head>
+<body>
+
+    <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h3>Menu</h3>
+            <i class="fas fa-times close-btn" onclick="toggleSidebar()"></i>
+        </div>
+
+        <div class="menu-item" onclick="toggleTheme()">
+            <i class="fas fa-moon"></i> 
+            <span>Dark Mode</span>
+        </div>
+        
+        <div class="menu-item" onclick="alert('Email us: support@fincalc.com')">
+            <i class="fas fa-envelope"></i>
+            <span>Contact Us</span>
+        </div>
+
+        <div class="quote-container">
+            <i class="fas fa-heart heart-icon"></i>
+            <p style="font-style: italic; font-size: 0.9rem;">"Investing is about more than money. It's about securing your future."</p>
+        </div>
+    </aside>
+
+    <header>
+        <button class="menu-btn" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+        </button>
+        <span class="app-title" id="page-title">SIP Calculator</span>
+    </header>
+
+    <main>
+        
+        <section id="tab-sip" class="tab-section active">
+            <div class="card">
+                <div class="form-group">
+                    <label>Monthly Investment (₹)</label>
+                    <input type="number" id="sip-p" placeholder="5000">
+                </div>
+                <div class="form-group">
+                    <label>Annual Return Rate (%)</label>
+                    <input type="number" id="sip-r" placeholder="12">
+                </div>
+                <div class="form-group">
+                    <label>Time Period (Years)</label>
+                    <input type="number" id="sip-n" placeholder="10">
+                </div>
+                <button class="calc-btn-main" onclick="calcSIP()">Calculate</button>
+
+                <div id="res-sip" class="result-display">
+                    <p style="font-size: 0.9rem; color: var(--text-sec);">Expected Maturity Value</p>
+                    <div class="result-value" id="val-sip">₹ 0</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-stock" class="tab-section">
+            <div class="card">
+                <div class="form-group">
+                    <label>Buy Price</label>
+                    <input type="number" id="stock-buy" placeholder="100">
+                </div>
+                <div class="form-group">
+                    <label>Sell Price</label>
+                    <input type="number" id="stock-sell" placeholder="150">
+                </div>
+                <div class="form-group">
+                    <label>Quantity</label>
+                    <input type="number" id="stock-qty" placeholder="10">
+                </div>
+                <button class="calc-btn-main" onclick="calcStock()">Check Profit</button>
+
+                <div id="res-stock" class="result-display">
+                    <p style="font-size: 0.9rem; color: var(--text-sec);" id="lbl-stock">Profit / Loss</p>
+                    <div class="result-value" id="val-stock">0.00</div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-sci" class="tab-section">
+            <div class="sci-display" id="sci-screen">0</div>
+            <div class="sci-grid">
+                <button class="sci-btn op" onclick="sciClr()">AC</button>
+                <button class="sci-btn op" onclick="sciPush('Math.sin(')">sin</button>
+                <button class="sci-btn op" onclick="sciPush('Math.cos(')">cos</button>
+                <button class="sci-btn op" onclick="sciPush('/')">÷</button>
+                
+                <button class="sci-btn" onclick="sciPush('7')">7</button>
+                <button class="sci-btn" onclick="sciPush('8')">8</button>
+                <button class="sci-btn" onclick="sciPush('9')">9</button>
+                <button class="sci-btn op" onclick="sciPush('*')">×</button>
+
+                <button class="sci-btn" onclick="sciPush('4')">4</button>
+                <button class="sci-btn" onclick="sciPush('5')">5</button>
+                <button class="sci-btn" onclick="sciPush('6')">6</button>
+                <button class="sci-btn op" onclick="sciPush('-')">-</button>
+
+                <button class="sci-btn" onclick="sciPush('1')">1</button>
+                <button class="sci-btn" onclick="sciPush('2')">2</button>
+                <button class="sci-btn" onclick="sciPush('3')">3</button>
+                <button class="sci-btn op" onclick="sciPush('+')">+</button>
+
+                <button class="sci-btn" onclick="sciPush('.')">.</button>
+                <button class="sci-btn" onclick="sciPush('0')">0</button>
+                <button class="sci-btn" onclick="sciPush(')')">)</button>
+                <button class="sci-btn eq" onclick="sciCalc()">=</button>
+            </div>
+        </section>
+
+    </main>
+
+    <nav class="bottom-nav">
+        <div class="nav-tab active" onclick="switchTab('sip', this)">
+            <i class="fas fa-chart-line"></i>
+            <span>SIP</span>
+        </div>
+        <div class="nav-tab" onclick="switchTab('stock', this)">
+            <i class="fas fa-chart-pie"></i>
+            <span>Stock</span>
+        </div>
+        <div class="nav-tab" onclick="switchTab('sci', this)">
+            <i class="fas fa-calculator"></i>
+            <span>Scientific</span>
+        </div>
+    </nav>
+
+    <script>
+        // --- NAVIGATION ---
+        function switchTab(tab, el) {
+            // Hide all sections
+            document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
+            // Remove active state from nav
+            document.querySelectorAll('.nav-tab').forEach(n => n.classList.remove('active'));
+            
+            // Show selected
+            document.getElementById('tab-' + tab).classList.add('active');
+            el.classList.add('active');
+
+            // Update Header
+            const titles = { sip: 'SIP Calculator', stock: 'Stock Calculator', sci: 'Scientific Calc' };
+            document.getElementById('page-title').innerText = titles[tab];
+        }
+
+        // --- SIDEBAR TOGGLE ---
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        // --- DARK MODE ---
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            document.documentElement.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+            toggleSidebar(); // Auto close menu
+        }
+
+        // --- LOGIC: SIP ---
+        function calcSIP() {
+            const P = parseFloat(document.getElementById('sip-p').value);
+            const r = parseFloat(document.getElementById('sip-r').value);
+            const n = parseFloat(document.getElementById('sip-n').value);
+            if(!P || !r || !n) return;
+
+            const i = r/12/100;
+            const months = n * 12;
+            const res = P * ((Math.pow(1+i, months)-1)/i) * (1+i);
+            
+            document.getElementById('res-sip').style.display = 'block';
+            document.getElementById('val-sip').innerText = '₹ ' + Math.round(res).toLocaleString();
+        }
+
+        // --- LOGIC: STOCK ---
+        function calcStock() {
+            const buy = parseFloat(document.getElementById('stock-buy').value);
+            const sell = parseFloat(document.getElementById('stock-sell').value);
+            const qty = parseFloat(document.getElementById('stock-qty').value);
+            if(!buy || !sell || !qty) return;
+
+            const profit = (sell - buy) * qty;
+            const box = document.getElementById('res-stock');
+            const val = document.getElementById('val-stock');
+            const lbl = document.getElementById('lbl-stock');
+
+            box.style.display = 'block';
+            lbl.innerText = profit >= 0 ? 'Net Profit' : 'Net Loss';
+            val.innerText = (profit >= 0 ? '+' : '') + profit.toFixed(2);
+            val.style.color = profit >= 0 ? '#4CAF50' : '#F44336';
+            box.style.background = profit >= 0 ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)';
+        }
+
+        // --- LOGIC: SCIENTIFIC ---
+        let sciExp = '';
+        function sciPush(v) {
+            sciExp += v;
+            document.getElementById('sci-screen').innerText = sciExp;
+        }
+        function sciClr() {
+            sciExp = '';
+            document.getElementById('sci-screen').innerText = '0';
+        }
+        function sciCalc() {
+            try {
+                // Warning: eval is used for simplicity here.
+                const res = eval(sciExp); 
+                document.getElementById('sci-screen').innerText = res;
+                sciExp = res.toString();
+            } catch(e) {
+                document.getElementById('sci-screen').innerText = 'Error';
+                sciExp = '';
+            }
+        }
+    </script>
+</body>
+</html>
